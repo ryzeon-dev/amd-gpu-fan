@@ -1,0 +1,9 @@
+[Unit]
+Description=AMD GPU Fan controller daemon
+
+[Service]
+ExecStart=python3 /etc/amd-gpu-fan/daemon.py
+Type=simple
+
+[Install]
+WantedBy=default.target

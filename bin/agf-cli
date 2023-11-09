@@ -1,0 +1,91 @@
+#!/usr/bin/python3
+
+from subprocess import getoutput as terminal
+import os
+import sys
+
+if __name__ == '__main__':
+    if terminal('whoami') != 'root':
+        print('Must execute as root')
+        sys.exit(0)
+
+    args = sys.argv[1:]
+
+    if not len(args):
+        print(f'Active configuration name: {terminal("cat /etc/amd-gpu-fan/conf.txt")}')
+        print(f'Configuration details:')
+        print(terminal(f'cat /etc/amd-gpu-fan/conf/{terminal("cat /etc/amd-gpu-fan/conf.txt")}'))
+
+    elif 'kill' in args:
+        os.system('systemctl stop amd-gpu-fan.service')
+
+    elif 'off' in args:
+        os.system('systemctl stop amd-gpu-fan.service')
+        os.system('systemctl disable amd-gpu-fan.service')
+
+    elif 'on' in args:
+        os.system('systemctl enable /etc/amd-gpu-fan/amd-gpu-fan.service')
+        os.system('systemctl start amd-gpu-fan.service')
+
+    elif 'start' in args:
+        os.system('systemctl start amd-gpu-fan.service')
+
+    elif '--help' in args or '-h' in args:
+        print('agf-cli: AMD GPU Fan controller CLI')
+        print('usage: agf-cli [on | off | kill | start] [-h, --help | -mk, --mkconf | -a, --apply | -ls, --list]')
+        print('arguments:')
+        print('\ton\tenables the daemon and starts it')
+        print('\toff\tstops the daemon and disables it')
+        print('\tkill\tstops the daemon')
+        print('\tstart\tstarts the daemon')
+        print('\t\tif no argument is provided, current configuration is printed')
+        print('options:')
+        print('\t-h, --help\tshow this message and exit')
+        print('\t-mk, --mkconf\tcreate new configuration, specifications must be comma-separated')
+        print('\t-a, --apply\tapply a configuration')
+        print('\t-ls, --list\tlist all existing configurations')
+
+    elif '-mk' in args or '--mkconf' in args:
+        try:
+            index = args.index('-mk') + 1
+        except:
+             index = args.index('--mkconf') + 1
+
+        configuration = ''
+        newConf = args[index].split(',')
+        print(newConf)
+
+        for element in newConf:
+            configuration += ' '.join(element.split('=')) + '\n'
+
+        with open('/etc/amd-gpu-fan/conf/custom.conf', 'w') as file:
+            file.write(configuration)
+
+        with open('/etc/amd-gpu-fan/conf.txt', 'w') as file:
+            file.write('custom.conf')
+
+        os.system('sudo systemctl restart amd-gpu-fan.service')
+
+    elif '-a' in args or '--apply' in args:
+        try:
+            index = args.index('-a') + 1
+        except:
+             index = args.index('--apply') + 1
+
+        try:
+            conf = args[index]
+        except:
+            print('No configuration name provided')
+            sys.exit(0)
+
+        if conf not in os.listdir('/etc/amd-gpu-fan/conf/'):
+            print(f'Cannot apply "{conf}": no such configuration found')
+            sys.exit(0)
+
+        with open('/etc/amd-gpu-fan/conf.txt', 'w') as file:
+            file.write(conf)
+
+        os.system('sudo systemctl restart amd-gpu-fan.service')
+
+    elif '-ls' in args or '--list' in args:
+        print('\t'.join(os.listdir('/etc/amd-gpu-fan/conf/')))
