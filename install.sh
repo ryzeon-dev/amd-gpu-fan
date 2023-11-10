@@ -4,6 +4,15 @@ if [ "$(whoami)" != "root" ]; then
   echo "Script must be executed as root"
 fi
 
+if ! test -f /sys/class/drm/card0/device/hwmon/hwmon1/fan1_target
+then
+  echo "Error: your system appears to not be compatible with this software"
+  echo "In order to use amd-gpu-fan service, you must have an AMD GPU in your system and updated drivers"
+  echo "If you think this is a mistake, please report the situation to the developer creating an issue at:"
+  echo "https://github.com/cpy-dev/amd-gpu-fan"
+  exit 0
+fi
+
 echo "Creating directory structure"
 mkdir -p /etc/amd-gpu-fan/conf
 

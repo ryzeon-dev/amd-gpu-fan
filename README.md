@@ -2,7 +2,8 @@
 This tool provides a daemon, a CLI and a GUI, allowing the user to create and manage maps for GPU fans
 
 ### DISCLAIMER
-This tool only works with AMD GPUs
+This tool only works with AMD GPUs, and is developed for Linux\
+Feel free to extend its function for other Operative Systems, and if you do, please patch your changes and submit them as commits
 
 ## Installation
 Run the installation script as root

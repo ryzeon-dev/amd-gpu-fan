@@ -4,11 +4,12 @@ from subprocess import getoutput as terminal
 import os
 import sys
 
-if __name__ == '__main__':
+def checkRoot():
     if terminal('whoami') != 'root':
-        print('Must execute as root')
-        sys.exit(0)
+        print('Error: this function requires root execution', file=sys.stderr)
+        sys.exit(1)
 
+if __name__ == '__main__':
     args = sys.argv[1:]
 
     if not len(args):
@@ -17,35 +18,40 @@ if __name__ == '__main__':
         print(terminal(f'cat /etc/amd-gpu-fan/conf/{terminal("cat /etc/amd-gpu-fan/conf.txt")}'))
 
     elif 'kill' in args:
+        checkRoot()
         os.system('systemctl stop amd-gpu-fan.service')
 
     elif 'off' in args:
+        checkRoot()
         os.system('systemctl stop amd-gpu-fan.service')
         os.system('systemctl disable amd-gpu-fan.service')
 
     elif 'on' in args:
+        checkRoot()
         os.system('systemctl enable /etc/amd-gpu-fan/amd-gpu-fan.service')
         os.system('systemctl start amd-gpu-fan.service')
 
     elif 'start' in args:
+        checkRoot()
         os.system('systemctl start amd-gpu-fan.service')
 
     elif '--help' in args or '-h' in args:
         print('agf-cli: AMD GPU Fan controller CLI')
         print('usage: agf-cli [on | off | kill | start] [-h, --help | -mk, --mkconf | -a, --apply | -ls, --list]')
         print('arguments:')
-        print('\ton\tenables the daemon and starts it')
-        print('\toff\tstops the daemon and disables it')
-        print('\tkill\tstops the daemon')
-        print('\tstart\tstarts the daemon')
+        print('\ton\tenables the daemon and starts it (root)')
+        print('\toff\tstops the daemon and disables it (root)')
+        print('\tkill\tstops the daemon (root)')
+        print('\tstart\tstarts the daemon (root)')
         print('\t\tif no argument is provided, current configuration is printed')
         print('options:')
         print('\t-h, --help\tshow this message and exit')
-        print('\t-mk, --mkconf\tcreate new configuration, specifications must be comma-separated')
-        print('\t-a, --apply\tapply a configuration')
+        print('\t-mk, --mkconf\tcreate new configuration, specifications must be comma-separated (root)')
+        print('\t-a, --apply\tapply a configuration (root)')
         print('\t-ls, --list\tlist all existing configurations')
 
     elif '-mk' in args or '--mkconf' in args:
+        checkRoot()
         try:
             index = args.index('-mk') + 1
         except:
@@ -67,6 +73,7 @@ if __name__ == '__main__':
         os.system('sudo systemctl restart amd-gpu-fan.service')
 
     elif '-a' in args or '--apply' in args:
+        checkRoot()
         try:
             index = args.index('-a') + 1
         except:
