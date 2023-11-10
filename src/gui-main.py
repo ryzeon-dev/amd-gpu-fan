@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import sys
 import time
 import customtkinter as ctk
 from subprocess import getoutput as terminal
@@ -223,4 +224,9 @@ class Interface:
         self.configuration.applyCurrentConfiguration()
 
 if __name__ == '__main__':
-    Interface()
+    try:
+        Interface()
+    except FileNotFoundError:
+        print('Error: improper installation, configuration files not found', file=sys.stderr)
+    except ValueError:
+        print('Error: device\'s GPU drivers appear to not be compatible with the software', file=sys.stderr)
