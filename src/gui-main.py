@@ -38,13 +38,13 @@ class Configuration:
             elif 'high-speed' in line:
                 self.highSpeed = line.split(' ')[1]
 
-    def applyCurrentConfiguration(self):
+    def applyCurrentConfiguration(self, max):
         tempFile = tempfile.mktemp(prefix='agf-gui', suffix='.sh')
 
         with open(tempFile,'w') as file:
             file.write(
                 f'''#!/bin/bash
-echo "low-speed {int(self.lowSpeed * 5300)}\nmid-speed {int(self.midSpeed * 5300)}\nhigh-speed {int(self.highSpeed * 5300)}\nlow-temp {int(self.lowTemp * 100)}\nmid-temp {int(self.midTemp * 100)}\nhigh-temp {int(self.highTemp * 100)}" > /etc/amd-gpu-fan/conf/custom.conf
+echo "low-speed {int(self.lowSpeed * max)}\nmid-speed {int(self.midSpeed * max)}\nhigh-speed {int(self.highSpeed * max)}\nlow-temp {int(self.lowTemp * 100)}\nmid-temp {int(self.midTemp * 100)}\nhigh-temp {int(self.highTemp * 100)}" > /etc/amd-gpu-fan/conf/custom.conf
 echo "custom.conf" > /etc/amd-gpu-fan/conf.txt
 systemctl daemon-reload
 systemctl restart amd-gpu-fan.service
@@ -221,7 +221,7 @@ class Interface:
         self.configuration.midSpeed = self.midSpeedSlider.get()
         self.configuration.highSpeed = self.highSpeedSlider.get()
 
-        self.configuration.applyCurrentConfiguration()
+        self.configuration.applyCurrentConfiguration(self.maxRpm)
 
 if __name__ == '__main__':
     try:
