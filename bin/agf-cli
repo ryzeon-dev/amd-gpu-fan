@@ -10,6 +10,25 @@ def checkRoot():
         print('Error: this function requires root execution', file=sys.stderr)
         sys.exit(1)
 
+hwmonDir = '/sys/class/drm/card0/device/hwmon'
+hwmonDir = hwmonDir + '/' + os.listdir(hwmonDir)[0]
+
+jsonTemplate = '''
+{
+    "temp" : {
+        "low" : $lowTemp,
+        "mid" : $midTemp,
+        "high" : $highTemp
+    },
+    "speed" : {
+        "low" : $lowSpeed,
+        "mid" : $midSpeed,
+        "high" : $highSpeed
+    },
+    "performance" : "$performance"
+}
+'''
+
 if __name__ == '__main__':
     args = sys.argv[1:]
 
@@ -52,31 +71,65 @@ if __name__ == '__main__':
         print('\t\tif no argument is provided, current configuration is printed')
         print('options:')
         print('\t-h, --help\tshow this message and exit')
-        print('\t-mk, --mkconf\tcreate new configuration, specifications must be comma-separated (root)')
+        print('\t-mk, --mkconf\tcreate new configuration (root)')
         print('\t-a, --apply\tapply a configuration (root)')
         print('\t-ls, --list\tlist all existing configurations')
 
     elif '-mk' in args or '--mkconf' in args:
         checkRoot()
-        try:
-            index = args.index('-mk') + 1
-        except:
-             index = args.index('--mkconf') + 1
 
-        configuration = ''
-        newConf = args[index].split(',')
-        print(newConf)
+        maxRpm = int(terminal(f'cat {hwmonDir}/fan1_max'))
+        minRpm = int(terminal(f'cat {hwmonDir}/fan1_min'))
 
-        for element in newConf:
-            configuration += ' '.join(element.split('=')) + '\n'
+        name = input('New configuration name: ')
 
-        with open('/etc/amd-gpu-fan/conf/custom.conf', 'w') as file:
-            file.write(configuration)
+        while True:
+            lowTemp = input('Enter low temp (0 - 100): ')
+            if int(lowTemp) > 0 and int(lowTemp) <= 100:
+                break
 
-        with open('/etc/amd-gpu-fan/conf.txt', 'w') as file:
-            file.write('custom.conf')
+        while True:
+            lowRpm = input(f'Enter low speed ({minRpm} - {maxRpm}): ')
+            if int(lowRpm) >= minRpm and int(lowRpm) <= maxRpm:
+                break
 
-        os.system('sudo systemctl restart amd-gpu-fan.service')
+        while True:
+            midTemp = input('Enter mid temp (0 - 100): ')
+            if int(midTemp) > 0 and int(midTemp) <= 100:
+                break
+
+        while True:
+            midRpm = input(f'Enter mid speed ({minRpm} - {maxRpm}): ')
+            if int(midRpm) >= minRpm and int(midTemp) <= maxRpm:
+                break
+
+        while True:
+            highTemp = input('Enter high temp (0 - 100): ')
+            if int(highTemp) > 0 and int(highTemp) <= 100:
+                break
+
+        while True:
+            highRpm = input(f'Enter high speed ({minRpm} - {maxRpm}): ')
+            if int(highRpm) >= minRpm and int(highRpm) <= maxRpm:
+                break
+
+        while True:
+            performanceMode = input('Enter GPU performance mode (low - auto - high): ')
+            if performanceMode in ['low', 'auto', 'high']:
+                break
+
+        jsonConfig = jsonTemplate.replace('$performance', performanceMode)
+        jsonConfig = jsonConfig.replace('$lowTemp', str(int(lowTemp)))
+        jsonConfig = jsonConfig.replace('$midTemp', str(int(midTemp)))
+        jsonConfig = jsonConfig.replace('$highTemp', str(int(highTemp)))
+        jsonConfig = jsonConfig.replace('$lowSpeed', str(int(lowRpm)))
+        jsonConfig = jsonConfig.replace('$midSpeed', str(int(midRpm)))
+        jsonConfig = jsonConfig.replace('$highSpeed', str(int(highRpm)))
+
+        with open(f'/etc/amd-gpu-fan/conf/{name}', 'w') as config:
+            config.write(jsonConfig)
+
+        print(f'New configuration file {name}.json created')
 
     elif '-a' in args or '--apply' in args:
         checkRoot()
