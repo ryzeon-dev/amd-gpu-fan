@@ -31,12 +31,17 @@ def gpuTemp():
     with open(f'{hwmonDir}/temp1_input', 'r') as tempFile:
         return int(tempFile.read()) / 1000
 
-def enableFanControl():
-    os.system(f'echo 2 > {hwmonDir}/pwm1_enable')
-    os.system(f'echo 1 > {hwmonDir}/fan1_enable')
-
 def setSpeed(speed):
-    os.system(f'echo {speed} > {hwmonDir}/fan1_target')
+    os.system(f'sudo chmod 666 {hwmonDir}/pwm1_enable {hwmonDir}/fan1_enable {hwmonDir}/fan1_target')
+
+    with open(f'{hwmonDir}/pwm1_enable', 'w') as file:
+        file.write('2')
+
+    with open(f'{hwmonDir}/fan1_enable', 'w') as file:
+        file.write('1')
+
+    with open(f'{hwmonDir}/fan1_target', 'w') as file:
+        file.write(str(int(speed)))
 
 def setPerformance(mode):
     os.system(f'echo {mode} > /sys/class/drm/card0/device/power_dpm_force_performance_level')
@@ -51,7 +56,6 @@ if __name__ == '__main__':
         sys.exit(0)
 
     low, mid, high, lowSpeed, midSpeed, highSpeed, performanceMode = conf
-    enableFanControl()
 
     while True:
         temperature = gpuTemp()
