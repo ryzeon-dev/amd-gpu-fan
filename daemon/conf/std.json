@@ -1,0 +1,13 @@
+{
+  "temp" : {
+    "low" : 40,
+    "mid" : 55,
+    "high" : 70
+  },
+  "speed" : {
+    "low" : 1700,
+    "mid" : 3000,
+    "high" : 5300
+  },
+  "performance" : "auto"
+}

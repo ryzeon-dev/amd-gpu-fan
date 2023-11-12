@@ -3,6 +3,7 @@
 from subprocess import getoutput as terminal
 import os
 import sys
+import json
 
 def checkRoot():
     if terminal('whoami') != 'root':
@@ -15,7 +16,12 @@ if __name__ == '__main__':
     if not len(args):
         print(f'Active configuration name: {terminal("cat /etc/amd-gpu-fan/conf.txt")}')
         print(f'Configuration details:')
-        print(terminal(f'cat /etc/amd-gpu-fan/conf/{terminal("cat /etc/amd-gpu-fan/conf.txt")}'))
+        with open(f'/etc/amd-gpu-fan/conf/{terminal("cat /etc/amd-gpu-fan/conf.txt")}', 'r') as conf:
+            config = json.load(conf)
+        print(f'Low: {config["temp"]["low"]} C @ {config["speed"]["low"]} rpm')
+        print(f'Mid: {config["temp"]["mid"]} C @ {config["speed"]["mid"]} rpm')
+        print(f'High: {config["temp"]["high"]} C @ {config["speed"]["high"]} rpm')
+        print(f'GPU performance mode: {config["performance"]}')
 
     elif 'kill' in args:
         checkRoot()

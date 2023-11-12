@@ -1,66 +1,60 @@
 #!/usr/bin/python3
-
+import sys
 import time
 import os
+import json
 
 baseDir = '/etc/amd-gpu-fan'
+hwmonDir = '/sys/class/drm/card0/device/hwmon/'
+hwmonDir += os.listdir(hwmonDir)[0]
 
 def getConf():
     with open(f'{baseDir}/conf.txt', 'r') as file:
         confName = file.read().strip()
 
     with open(f'{baseDir}/conf/{confName}', 'r') as conf:
-        config = conf.read()
+        config = json.load(conf)
 
-    config = config.split('\n')
-    low = None
-    mid = None
-    high = None
+    low = config.get('temp').get('low')
+    mid = config.get('temp').get('mid')
+    high = config.get('temp').get('high')
 
-    lowSpeed = None
-    midSpeed = None
-    highSpeed = None
-    
-    for line in config:
-        if 'low-temp' in line:
-            low = int(float(line.split(' ')[1]))
+    lowSpeed = config.get('speed').get('low')
+    midSpeed = config.get('speed').get('mid')
+    highSpeed = config.get('speed').get('high')
 
-        elif 'mid-temp' in line:
-            mid = int(float(line.split(' ')[1]))
+    performanceMode = config.get('performance')
 
-        elif 'high-temp' in line:
-            high = int(float(line.split(' ')[1]))
-
-        elif 'low-speed' in line:
-            lowSpeed = int(float(line.split(' ')[1]))
-
-        elif 'mid-speed' in line:
-            midSpeed = int(float(line.split(' ')[1]))
-
-        elif 'high-speed' in line:
-            highSpeed = int(float(line.split(' ')[1]))
-
-    return low, mid, high, lowSpeed, midSpeed, highSpeed
+    return low, mid, high, lowSpeed, midSpeed, highSpeed, performanceMode
 
 def gpuTemp():
-    with open('/sys/class/drm/card0/device/hwmon/hwmon1/temp1_input', 'r') as tempFile:
+    with open(f'{hwmonDir}/temp1_input', 'r') as tempFile:
         return int(tempFile.read()) / 1000
 
-def enablePWM():
-    os.system('echo 1 > /sys/class/drm/card0/device/hwmon/hwmon1/pwm1_enable')
+def enableFanControl():
+    os.system(f'echo 2 > {hwmonDir}/pwm1_enable')
+    os.system(f'echo 1 > {hwmonDir}/fan1_enable')
 
 def setSpeed(speed):
-    os.system(f'echo {speed} > /sys/class/drm/card0/device/hwmon/hwmon1/fan1_target')
+    os.system(f'echo {speed} > {hwmonDir}/fan1_target')
 
-def fix(value, inMin, inMax, outMin, outMax):
-    return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
+def setPerformance(mode):
+    os.system(f'echo {mode} > /sys/class/drm/card0/device/power_dpm_force_performance_level')
+
+def fix(temperature, minTemp, maxTemp, minSpeed, maxSpeed):
+    return (temperature - minTemp) * (maxSpeed - minSpeed) / (maxTemp - minTemp) + minSpeed
 
 if __name__ == '__main__':
-    low, mid, high, lowSpeed, midSpeed, highSpeed = getConf()
-    
+    conf = getConf()
+    if None in conf:
+        print('Error: unvalid configuration file', file=sys.stderr)
+        sys.exit(0)
+
+    low, mid, high, lowSpeed, midSpeed, highSpeed, performanceMode = conf
+    enableFanControl()
+
     while True:
         temperature = gpuTemp()
-        enablePWM()
 
         if temperature < low:
             setSpeed(lowSpeed)
@@ -76,4 +70,5 @@ if __name__ == '__main__':
         else:
             setSpeed(highSpeed)
 
+        setPerformance(performanceMode)
         time.sleep(2)
