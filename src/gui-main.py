@@ -28,7 +28,7 @@ jsonTemplate = '''
 
 class Configuration:
     def __init__(self):
-        pass
+        self.fileName = None
 
     def loadCurrentConfiguration(self):
         with open('/etc/amd-gpu-fan/conf.txt', 'r') as confPath:
@@ -48,6 +48,7 @@ class Configuration:
         self.performanceMode = config.get('performance')
 
     def loadConfiguration(self, path):
+        self.fileName = path
         try:
             with open(path, 'r') as conf:
                 config = json.load(conf)
@@ -63,7 +64,7 @@ class Configuration:
 
         self.performanceMode = config.get('performance')
 
-    def applyCurrentConfiguration(self, max, fileName):
+    def saveAndApplyCurrentConfiguration(self, max, fileName):
         tempFile = tempfile.mktemp(prefix='agf-gui', suffix='.sh')
 
         jsonConfig = jsonTemplate.replace('$performance', self.performanceMode)
@@ -85,13 +86,29 @@ systemctl restart amd-gpu-fan.service
 
         os.system(f'pkexec sudo /bin/sh {tempFile}')
 
+    def applyCurrentConfiguration(self):
+        if self.fileName is None:
+            return
+
+        tempFile = tempfile.mktemp(prefix='agf-gui', suffix='.sh')
+        with open(tempFile, 'w') as file:
+            file.write(
+                f'''#!/bin/bash
+        echo "{self.fileName.split("/")[-1]}" > /etc/amd-gpu-fan/conf.txt
+        systemctl daemon-reload
+        systemctl restart amd-gpu-fan.service
+        ''')
+
+        os.system(f'pkexec sudo /bin/sh {tempFile}')
+
 class Slider(ctk.CTkFrame):
-    def __init__(self, master, labelText, min, max, unit=''):
+    def __init__(self, master, labelText, min, max, iface=None, unit=''):
         super().__init__(master, fg_color='transparent')
 
         self.min = min
         self.max = max
         self.unit = unit
+        self.iface = iface
 
         self.label = ctk.CTkLabel(self, text=labelText)
         self.label.pack(padx=10)
@@ -108,6 +125,9 @@ class Slider(ctk.CTkFrame):
     def __updateLabel__(self, *args):
         value = self.slider.get() * (self.max - self.min) + self.min
         self.value.configure(text=str(int(value)) + self.unit)
+
+        if self.iface is not None:
+            self.iface.changed = True
 
     def set(self, value):
         self.slider.set(int(value) / (self.max - self.min))
@@ -141,6 +161,7 @@ class Interface:
     def __init__(self):
         self.configuration = Configuration()
         self.configuration.loadCurrentConfiguration()
+        self.changed = False
 
         self.minRpm = int(terminal('cat /sys/class/drm/card0/device/hwmon/hwmon1/fan1_min'))
         self.maxRpm = int(terminal('cat /sys/class/drm/card0/device/hwmon/hwmon1/fan1_max'))
@@ -160,22 +181,22 @@ class Interface:
         self.topFrame = ctk.CTkFrame(self.mainFrame, fg_color='transparent')
         self.topFrame.pack(pady=10, padx=10)
 
-        self.lowTempSlider = Slider(self.topFrame, 'Low Temp', 0, 100, ' C')
+        self.lowTempSlider = Slider(self.topFrame, 'Low Temp', 0, 100, self, ' C')
         self.lowTempSlider.grid(row=0, column=0)
 
-        self.lowSpeedSlider = Slider(self.topFrame, 'Low Temp Speed', 0, self.maxRpm, ' rpm')
+        self.lowSpeedSlider = Slider(self.topFrame, 'Low Temp Speed', 0, self.maxRpm, self, ' rpm')
         self.lowSpeedSlider.grid(row=0, column=1)
 
-        self.midTempSlider = Slider(self.topFrame, 'Mid Temp', 0, 100, ' C')
+        self.midTempSlider = Slider(self.topFrame, 'Mid Temp', 0, 100, self, ' C')
         self.midTempSlider.grid(row=0, column=2)
 
-        self.midSpeedSlider = Slider(self.topFrame, 'Mid Temp Speed', 0, self.maxRpm, ' rpm')
+        self.midSpeedSlider = Slider(self.topFrame, 'Mid Temp Speed', 0, self.maxRpm, self, ' rpm')
         self.midSpeedSlider.grid(row=0, column=3)
 
-        self.highTempSlider = Slider(self.topFrame, 'High Temp', 0, 100, ' C')
+        self.highTempSlider = Slider(self.topFrame, 'High Temp', 0, 100, self, ' C')
         self.highTempSlider.grid(row=0, column=4)
 
-        self.highSpeedSlider = Slider(self.topFrame, 'High Temp Speed', 0, self.maxRpm, ' rpm')
+        self.highSpeedSlider = Slider(self.topFrame, 'High Temp Speed', 0, self.maxRpm, self, ' rpm')
         self.highSpeedSlider.grid(row=0, column=5)
 
         self.midHighFrame = ctk.CTkFrame(self.mainFrame, fg_color='transparent')
@@ -184,7 +205,7 @@ class Interface:
         self.performanceModeLabel = ctk.CTkLabel(self.midHighFrame, text='GPU performance mode:')
         self.performanceModeLabel.pack(padx=10, pady=10, side=ctk.LEFT)
 
-        self.performanceModeBox = ctk.CTkComboBox(self.midHighFrame, values=['low', 'auto', 'high'])
+        self.performanceModeBox = ctk.CTkComboBox(self.midHighFrame, values=['low', 'auto', 'high'], command=self.setChanged)
         self.performanceModeBox.set('auto')
         self.performanceModeBox.pack(padx=10, pady=10)
 
@@ -217,6 +238,9 @@ class Interface:
 
         start_new_thread(self.threadedLoop, ())
 
+    def setChanged(self):
+        self.changed = True
+
     def loadConfiguration(self):
         fileName = askopenfilename(defaultextension='.json', initialdir='/etc/amd-gpu-fan/conf/', filetypes=[('JSON file', '.json')])
         self.configuration.loadConfiguration(fileName)
@@ -231,6 +255,7 @@ class Interface:
         self.highSpeedSlider.set(self.configuration.highSpeed)
 
         self.performanceModeBox.set(self.configuration.performanceMode)
+        self.changed = False
 
     def loadStdConf(self):
         self.lowTempSlider.set(40)
@@ -269,18 +294,22 @@ class Interface:
             time.sleep(1)
 
     def save(self):
-        fileName = asksaveasfilename(filetypes=[('JSON file', '.json')], initialdir='/etc/amd-gpu-fan/conf/', defaultextension='.json')
+        if self.changed:
+            fileName = asksaveasfilename(filetypes=[('JSON file', '.json')], initialdir='/etc/amd-gpu-fan/conf/', defaultextension='.json')
 
-        self.configuration.lowTemp = self.lowTempSlider.get()
-        self.configuration.midTemp = self.midTempSlider.get()
-        self.configuration.highTemp = self.highTempSlider.get()
-        
-        self.configuration.lowSpeed = self.lowSpeedSlider.get()
-        self.configuration.midSpeed = self.midSpeedSlider.get()
-        self.configuration.highSpeed = self.highSpeedSlider.get()
-        self.configuration.performanceMode = self.performanceModeBox.get()
+            self.configuration.lowTemp = self.lowTempSlider.get()
+            self.configuration.midTemp = self.midTempSlider.get()
+            self.configuration.highTemp = self.highTempSlider.get()
 
-        self.configuration.applyCurrentConfiguration(self.maxRpm, fileName)
+            self.configuration.lowSpeed = self.lowSpeedSlider.get()
+            self.configuration.midSpeed = self.midSpeedSlider.get()
+            self.configuration.highSpeed = self.highSpeedSlider.get()
+            self.configuration.performanceMode = self.performanceModeBox.get()
+
+            self.configuration.saveAndApplyCurrentConfiguration(self.maxRpm, fileName)
+
+        else:
+            self.configuration.applyCurrentConfiguration()
 
 if __name__ == '__main__':
     try:
