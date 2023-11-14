@@ -1,7 +1,7 @@
 # AMD-GPU-Fan controller
 This tool provides a daemon, a CLI and a GUI, allowing the user to create and manage profiles for GPU's fans
 
-![amd-gpu-fan-GUI.png](..%2F..%2FPictures%2Famd-gpu-fan-GUI.png)
+![amd-gpu-fan-GUI.png](amd-gpu-fan-GUI.png)
 ### DISCLAIMER
 This tool only works with AMD GPUs, and is developed for Linux\
 Feel free to extend its function for other Operative Systems, and if you do, please patch your changes and submit them as commits
