@@ -236,6 +236,8 @@ class Interface:
         self.saveButton = ctk.CTkButton(self.lowFrame, text='Save and apply configuration', command=self.save)
         self.saveButton.grid(row=0, column=3, padx=10, pady=10)
 
+        self.loadCurrentConfiguration()
+
         start_new_thread(self.threadedLoop, ())
 
     def setChanged(self):
@@ -256,6 +258,20 @@ class Interface:
 
         self.performanceModeBox.set(self.configuration.performanceMode)
         self.changed = False
+
+    def loadCurrentConfiguration(self):
+        self.configuration.loadCurrentConfiguration()
+
+        self.lowTempSlider.set(self.configuration.lowTemp)
+        self.lowSpeedSlider.set(self.configuration.lowSpeed)
+
+        self.midTempSlider.set(self.configuration.midTemp)
+        self.midSpeedSlider.set(self.configuration.midSpeed)
+
+        self.highTempSlider.set(self.configuration.highTemp)
+        self.highSpeedSlider.set(self.configuration.highSpeed)
+
+        self.performanceModeBox.set(self.configuration.performanceMode)
 
     def loadStdConf(self):
         self.lowTempSlider.set(40)
