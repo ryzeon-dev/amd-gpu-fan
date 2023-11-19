@@ -157,6 +157,14 @@ class ProgressBar(ctk.CTkFrame):
         self.value.configure(text=str(value) + self.unit)
         self.progress.set(float(value) / (self.max - self.min))
 
+class GPUUsageBar(ProgressBar):
+    def __init__(self, master, text):
+        super().__init__(master, text, 0, 100, '%')
+
+    def set(self, value, clockSpeed):
+        self.value.configure(text=str(value) + self.unit + ' @ ' + str(clockSpeed) + 'MHz')
+        self.progress.set(float(value) / (self.max - self.min))
+
 class Interface:
     def __init__(self):
         self.configuration = Configuration()
@@ -211,6 +219,9 @@ class Interface:
 
         self.midLowFrame = ctk.CTkFrame(self.mainFrame, fg_color='transparent')
         self.midLowFrame.pack(padx=10, pady=10)
+
+        self.currentGPUUsage = GPUUsageBar(self.midLowFrame, 'Current GPU usage')
+        self.currentGPUUsage.pack()
 
         self.currentTemp = ProgressBar(self.midLowFrame, 'Current temperature', 0, 100, ' C')
         self.currentTemp.pack()
@@ -302,10 +313,14 @@ class Interface:
             rpm = terminal('cat /sys/class/drm/card0/device/hwmon/hwmon1/fan1_input')
             tmp = terminal('cat /sys/class/drm/card0/device/hwmon/hwmon1/temp1_input')
             performance = terminal('cat /sys/class/drm/card0/device/power_dpm_force_performance_level')
+            usage = terminal('cat /sys/class/drm/card0/device/gpu_busy_percent')
+            clock = terminal('cat /sys/class/drm/card0/device/pp_dpm_sclk | grep "*" | awk \'{ print $2 }\'')
+            clock = clock.replace('Mhz', '')
 
             self.currentTemp.set(int(tmp) / 1000)
             self.currentSpeed.set(int(rpm))
             self.currentPerformaceMode.configure(text=f'Current GPU performance mode: {performance}')
+            self.currentGPUUsage.set(int(usage), int(clock))
 
             time.sleep(1)
 
