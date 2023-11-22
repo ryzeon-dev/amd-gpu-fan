@@ -272,7 +272,7 @@ class Interface:
         self.highSpeedSlider.set(self.configuration.highSpeed)
 
         self.performanceModeBox.set(self.configuration.performanceMode)
-        self.displayedConfiguration.configure(text='Current displayed configuration: ' + fileName)
+        self.displayedConfiguration.configure(text='Current displayed configuration: ' + fileName.split('/')[-1])
 
         self.changed = False
 
