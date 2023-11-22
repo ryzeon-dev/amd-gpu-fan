@@ -46,6 +46,7 @@ class Configuration:
         self.highSpeed = config.get('speed').get('high')
 
         self.performanceMode = config.get('performance')
+        self.fileName = currentConfFile
 
     def loadConfiguration(self, path):
         self.fileName = path
@@ -232,6 +233,9 @@ class Interface:
         self.currentPerformaceMode = ctk.CTkLabel(self.midLowFrame, text='Current GPU performance mode: ')
         self.currentPerformaceMode.pack()
 
+        self.displayedConfiguration = ctk.CTkLabel(self.midLowFrame, text='Current displayed configuration: ')
+        self.displayedConfiguration.pack(pady=5)
+
         self.lowFrame = ctk.CTkFrame(self.mainFrame)
         self.lowFrame.pack(pady=10, padx=10)
 
@@ -268,6 +272,8 @@ class Interface:
         self.highSpeedSlider.set(self.configuration.highSpeed)
 
         self.performanceModeBox.set(self.configuration.performanceMode)
+        self.displayedConfiguration.configure(text='Current displayed configuration: ' + fileName)
+
         self.changed = False
 
     def loadCurrentConfiguration(self):
@@ -283,6 +289,8 @@ class Interface:
         self.highSpeedSlider.set(self.configuration.highSpeed)
 
         self.performanceModeBox.set(self.configuration.performanceMode)
+        self.displayedConfiguration.configure(text='Current displayed configuration: ' + self.configuration.fileName)
+        self.changed = False
 
     def loadStdConf(self):
         self.lowTempSlider.set(40)
@@ -316,6 +324,10 @@ class Interface:
             usage = terminal('cat /sys/class/drm/card0/device/gpu_busy_percent')
             clock = terminal('cat /sys/class/drm/card0/device/pp_dpm_sclk | grep "*" | awk \'{ print $2 }\'')
             clock = clock.replace('Mhz', '')
+
+            text = self.displayedConfiguration.cget('text')
+            if self.changed and 'modified' not in text:
+                self.displayedConfiguration.configure(text=text + ' (modified)')
 
             self.currentTemp.set(int(tmp) / 1000)
             self.currentSpeed.set(int(rpm))
