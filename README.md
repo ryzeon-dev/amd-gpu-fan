@@ -6,6 +6,9 @@ This tool provides a daemon, a CLI and a GUI, allowing the user to create and ma
 This tool only works with AMD GPUs, and is developed for Linux\
 Feel free to extend its function for other Operative Systems, and if you do, please patch your changes and submit them as commits
 
+Some GPUs are self-governed, meaning that it is not possible to create fan maps via software. \
+In those cases, this software will not work
+
 ## Installation
 Run the installation script as root
 ```commandline
